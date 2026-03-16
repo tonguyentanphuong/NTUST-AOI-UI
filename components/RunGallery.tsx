@@ -1,22 +1,58 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { inspectionService } from '../services/inspectionService';
 import { InspectionStatus, RunDetail, CapturedImage } from '../types';
 import { ImageViewer } from './ImageViewer';
 
+const PAGE_SIZE = 24;
+
 export const RunGallery = ({ runId, onEdit, onBack }: { runId: string, onEdit: (runId: string) => void, onBack: () => void }) => {
     const [detail, setDetail] = useState<RunDetail | null>(null);
+    const [images, setImages] = useState<CapturedImage[]>([]);
     const [selectedImage, setSelectedImage] = useState<CapturedImage | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [offset, setOffset] = useState(0);
 
+    const observer = useRef<IntersectionObserver | null>(null);
+    const lastImageElementRef = useCallback((node: HTMLDivElement) => {
+        if (loading) return;
+        if (observer.current) observer.current.disconnect();
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && hasMore) {
+                setOffset(prevOffset => prevOffset + PAGE_SIZE);
+            }
+        });
+        if (node) observer.current.observe(node);
+    }, [loading, hasMore]);
+
+    // Initial Load
     useEffect(() => {
-        inspectionService.getRunDetail(runId).then(setDetail);
+        setLoading(true);
+        inspectionService.getRunDetail(runId, PAGE_SIZE, 0)
+            .then(data => {
+                setDetail(data);
+                setImages(data.images);
+                setHasMore(data.images.length === PAGE_SIZE);
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
     }, [runId]);
 
+    // Load more when offset changes
+    useEffect(() => {
+        if (offset === 0) return;
+        setLoading(true);
+        inspectionService.getRunDetail(runId, PAGE_SIZE, offset)
+            .then(data => {
+                setImages(prev => [...prev, ...data.images]);
+                setHasMore(data.images.length === PAGE_SIZE);
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
+    }, [runId, offset]);
+
     const handleImageUpdate = (updatedImage: CapturedImage) => {
-        if (!detail) return;
-        setDetail({
-            ...detail,
-            images: detail.images.map(img => img.id === updatedImage.id ? updatedImage : img)
-        });
+        setImages(imgs => imgs.map(img => img.id === updatedImage.id ? updatedImage : img));
         setSelectedImage(updatedImage);
     };
 
@@ -24,20 +60,14 @@ export const RunGallery = ({ runId, onEdit, onBack }: { runId: string, onEdit: (
         try {
             const date = new Date(ts);
             return date.toLocaleString('zh-TW', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
             });
-        } catch (e) {
-            return ts;
-        }
+        } catch (e) { return ts; }
     };
 
-    if (!detail) return <div className="p-10">Loading Details...</div>;
+    if (!detail && offset === 0) return <div className="p-10">Loading Details...</div>;
+    if (!detail) return null;
 
     return (
         <div className="flex flex-1 w-full max-w-[1600px] mx-auto h-[calc(100vh-65px)] overflow-hidden">
@@ -45,22 +75,16 @@ export const RunGallery = ({ runId, onEdit, onBack }: { runId: string, onEdit: (
             <aside className="hidden lg:flex flex-col w-80 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shrink-0 h-full overflow-y-auto">
                 <div className="flex flex-col gap-6 mb-8">
                     <div className="flex gap-4 items-start">
-                        <div className="bg-slate-200 rounded-lg size-16 shrink-0 bg-cover bg-center" style={{ backgroundImage: `url(${detail.images[0]?.imageUrl})` }}></div>
+                        <div className="bg-slate-200 rounded-lg size-16 shrink-0 bg-cover bg-center" style={{ backgroundImage: `url(${images[0]?.imageUrl})` }}></div>
                         <div className="flex flex-col">
                             <h1 className="text-slate-900 dark:text-white text-xl font-bold leading-tight">{detail.runId}</h1>
                             <p className="text-slate-500 text-sm mt-1">{detail.batchId} - {detail.line}</p>
-                            <span className="inline-flex items-center gap-1 mt-2 text-xs font-medium px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 w-fit">
-                                <span className="material-symbols-outlined text-[14px]">warning</span>
-                                Attention Needed
-                            </span>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-2">
-                        <button onClick={() => onEdit(runId)} className="flex items-center justify-center gap-3 px-3 py-2 rounded-lg bg-primary hover:bg-blue-600 text-white transition-colors w-full shadow-sm">
-                            <span className="material-symbols-outlined text-[18px]">edit</span>
-                            <span className="text-sm font-medium">Edit Run Statuses</span>
-                        </button>
-                    </div>
+                    <button onClick={() => onEdit(runId)} className="flex items-center justify-center gap-3 px-3 py-2 rounded-lg bg-primary hover:bg-blue-600 text-white transition-colors w-full shadow-sm">
+                        <span className="material-symbols-outlined text-[18px]">edit</span>
+                        <span className="text-sm font-medium">Edit Run Statuses</span>
+                    </button>
                 </div>
 
                 <div className="flex flex-col gap-4">
@@ -69,37 +93,13 @@ export const RunGallery = ({ runId, onEdit, onBack }: { runId: string, onEdit: (
                         {[
                             ['Start Time', formatTimestamp(detail.startTime)],
                             ['End Time', formatTimestamp(detail.endTime)],
-                            ['Total Boards', detail.totalBoards],
                             ['Operator', detail.operator]
                         ].map(([label, val]) => (
-                            <React.Fragment key={label as string}>
-                                <div className="border-t border-slate-100 dark:border-slate-700 col-span-2 pt-3 flex justify-between">
-                                    <p className="text-slate-500">{label as string}</p>
-                                    <p className="text-slate-900 dark:text-white font-medium">{val}</p>
-                                </div>
-                            </React.Fragment>
-                        ))}
-
-                        {/* Illumination row */}
-                        <div className="border-t border-slate-100 dark:border-slate-700 col-span-2 pt-3 flex justify-between items-center">
-                            <p className="text-slate-500">Illumination</p>
-                            <div className="flex gap-1">
-                                {['L', 'R', 'T', 'B'].map(code => {
-                                    const activeChars = detail.illumination?.includes(',')
-                                        ? detail.illumination.split(',').map(s => s.trim().toUpperCase())
-                                        : detail.illumination?.toUpperCase().split('').filter(s => s.trim()) || [];
-                                    const isActive = activeChars.includes(code);
-                                    return (
-                                        <span key={code} className={`size-5 flex items-center justify-center rounded text-[10px] font-black border ${isActive
-                                                ? 'bg-primary border-primary text-white shadow-sm'
-                                                : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-300 dark:text-slate-600'
-                                            }`}>
-                                            {code}
-                                        </span>
-                                    );
-                                })}
+                            <div key={label as string} className="border-t border-slate-100 dark:border-slate-700 col-span-2 pt-3 flex justify-between">
+                                <p className="text-slate-500">{label as string}</p>
+                                <p className="text-slate-900 dark:text-white font-medium">{val}</p>
                             </div>
-                        </div>
+                        ))}
                     </div>
                 </div>
             </aside>
@@ -117,55 +117,42 @@ export const RunGallery = ({ runId, onEdit, onBack }: { runId: string, onEdit: (
                     </div>
 
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                        <h3 className="text-slate-900 dark:text-white text-2xl font-bold tracking-tight">Captured Images</h3>
+                        <h3 className="text-slate-900 dark:text-white text-2xl font-bold tracking-tight">Captured Images ({images.length})</h3>
                         <div className="flex bg-white dark:bg-slate-900 rounded-lg p-1 border border-slate-200 dark:border-slate-700">
                             <button className="px-4 py-1.5 rounded text-sm font-medium bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm">All</button>
-                            <button className="px-4 py-1.5 rounded text-sm font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Failures Only</button>
-                            <button className="px-4 py-1.5 rounded text-sm font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Passed</button>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-10">
-                        {detail.images.map((img) => {
+                        {images.map((img, index) => {
                             const isFail = img.status === InspectionStatus.FAIL;
-                            const borderColor = isFail ? 'border-red-200 ring-2 ring-red-100 dark:border-red-900 dark:ring-red-900/20' : 'border-slate-200 dark:border-slate-700';
-
+                            const isLast = images.length === index + 1;
+                            
                             return (
                                 <div
                                     key={img.id}
+                                    ref={isLast ? lastImageElementRef : null}
                                     onClick={() => setSelectedImage(img)}
-                                    className={`group flex flex-col bg-white dark:bg-slate-900 rounded-xl overflow-hidden border ${borderColor} hover:shadow-lg transition-all cursor-pointer`}
+                                    className={`group flex flex-col bg-white dark:bg-slate-900 rounded-xl overflow-hidden border ${isFail ? 'border-red-200 ring-2 ring-red-100' : 'border-slate-200'} hover:shadow-lg transition-all cursor-pointer`}
                                 >
                                     <div className="relative aspect-[4/3] bg-slate-200 dark:bg-slate-800 overflow-hidden">
                                         <div className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105" style={{ backgroundImage: `url(${img.imageUrl})` }}></div>
-                                        {isFail && <div className="absolute inset-0 bg-red-500/10 mix-blend-multiply"></div>}
-
                                         <div className="absolute top-2 right-2">
                                             <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full shadow-sm ${isFail ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                                                 <span className="material-symbols-outlined text-[14px]">{isFail ? 'cancel' : 'check_circle'}</span>
                                                 {img.status}
                                             </span>
                                         </div>
-
-                                        {isFail && img.label && (
-                                            <div className="absolute bottom-2 left-2 right-2">
-                                                <div className="bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded border border-white/20 truncate">
-                                                    {img.label}
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
-                                    <div className={`p-3 border-t flex justify-between items-center ${isFail ? 'bg-red-50/30 border-red-100 dark:bg-red-900/10 dark:border-red-900/30' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
-                                        <div>
-                                            <p className={`text-xs font-semibold uppercase tracking-wider ${isFail ? 'text-red-700/70' : 'text-slate-500'}`}>Position</p>
-                                            <p className={`font-bold text-lg ${isFail ? 'text-red-900 dark:text-red-100' : 'text-slate-900 dark:text-white'}`}>{img.position}</p>
-                                        </div>
-                                        <span className={`material-symbols-outlined ${isFail ? 'text-red-400' : 'text-slate-400'}`}>visibility</span>
+                                    <div className="p-3 border-t flex justify-between items-center text-sm">
+                                        <span className="font-bold">{img.position}</span>
+                                        <span className="text-slate-400 truncate ml-2">{img.label}</span>
                                     </div>
                                 </div>
                             );
                         })}
                     </div>
+                    {loading && <div className="text-center py-4 text-slate-500">Loading more images...</div>}
                 </div>
             </main>
 

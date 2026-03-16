@@ -53,12 +53,12 @@ export const inspectionService = {
         }
     },
 
-    getRunDetail: async (runId: string): Promise<RunDetail> => {
+    getRunDetail: async (runId: string, limit: number = 24, offset: number = 0): Promise<RunDetail> => {
         try {
-            // Parallel fetch: Run Details + Images
+            // Parallel fetch: Run Details + Paged Images
             const [runRes, imgsRes] = await Promise.all([
                 fetch(`${getApiBaseUrl()}/runs/${runId}`),
-                fetch(`${getApiBaseUrl()}/images/?run_code=${runId}`)
+                fetch(`${getApiBaseUrl()}/images/?run_code=${runId}&limit=${limit}&offset=${offset}`)
             ]);
 
             if (!runRes.ok) throw new Error('Failed to fetch run info');
@@ -79,7 +79,7 @@ export const inspectionService = {
                 images: imagesData.map((img: any) => ({
                     id: img.image_id,
                     position: `R${img.row_idx}-C${img.col_idx}`,
-                    status: img.condition as InspectionStatus,
+                    status: (img.condition === 'UNKNOWN' ? InspectionStatus.PASS : img.condition) as InspectionStatus,
                     imageUrl: `${getApiBaseUrl()}/images/proxy/${img.image_id}`,
                     label: img.file_name,
                     region: `Zone ${img.row_idx}-${img.col_idx}`,
