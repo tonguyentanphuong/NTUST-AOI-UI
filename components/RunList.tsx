@@ -90,30 +90,30 @@ export const RunList = ({ onViewDetail, onCreate }: { onViewDetail: (id: string)
     };
 
     return (
-        <div className="flex-1 flex flex-col bg-background-light dark:bg-background-dark p-8 overflow-y-auto">
-            <div className="max-w-[1400px] w-full mx-auto flex flex-col gap-6">
+        <div className="flex-1 flex flex-col bg-background-light dark:bg-background-dark p-4 md:p-8 overflow-y-auto">
+            <div className="max-w-[1400px] w-full mx-auto flex flex-col gap-6 pt-2 md:pt-0">
 
-                {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                 {/* Header Section */}
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-4">
-                            <h1 className="text-3xl md:text-4xl font-display font-black leading-tight text-slate-900 dark:text-white">Dashboard</h1>
+                            <h1 className="text-2xl md:text-3xl lg:text-4xl font-display font-black leading-tight text-slate-900 dark:text-white">Dashboard</h1>
                             <button
                                 onClick={fetchRuns}
                                 title="Refresh data"
-                                className="size-10 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-primary hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:rotate-180 shadow-sm"
+                                className="size-9 md:size-10 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-primary hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:rotate-180 shadow-sm"
                             >
-                                <span className="material-symbols-outlined text-[24px]">refresh</span>
+                                <span className="material-symbols-outlined text-[20px] md:text-[24px]">refresh</span>
                             </button>
                         </div>
-                        <p className="text-slate-500 dark:text-slate-400 text-base">Manage and review PCB automated optical inspection data</p>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base">Manage and review PCB inspection data</p>
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={onCreate} className="flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-white hover:bg-blue-600 transition-colors font-medium">
+                    <div className="flex flex-wrap gap-2">
+                        <button onClick={onCreate} className="flex-1 md:flex-none h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-white hover:bg-blue-600 transition-colors font-medium">
                             <span className="material-symbols-outlined text-[20px]">add</span>
-                            <span>New Inspection</span>
+                            <span className="whitespace-nowrap">New Inspection</span>
                         </button>
-                        <button className="flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium text-slate-700 dark:text-slate-300">
+                        <button className="flex-1 md:flex-none h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium text-slate-700 dark:text-slate-300">
                             <span className="material-symbols-outlined text-[20px]">download</span>
                             <span>Export</span>
                         </button>
@@ -121,13 +121,13 @@ export const RunList = ({ onViewDetail, onCreate }: { onViewDetail: (id: string)
                 </div>
 
                 {/* Filters */}
-                <div className="flex flex-wrap gap-4 py-2 items-center">
-                    <div className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 px-3 h-10">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Status</span>
+                <div className="flex flex-wrap gap-3 py-2 items-center">
+                    <div className="flex flex-1 min-w-[140px] items-center gap-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 px-3 h-10">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</span>
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="bg-transparent text-sm font-medium text-slate-600 dark:text-slate-300 focus:outline-none cursor-pointer"
+                            className="bg-transparent text-sm font-medium text-slate-600 dark:text-slate-300 focus:outline-none cursor-pointer w-full"
                         >
                             <option value="All">All Status</option>
                             <option value="PASS">Pass Only</option>
@@ -135,14 +135,14 @@ export const RunList = ({ onViewDetail, onCreate }: { onViewDetail: (id: string)
                         </select>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 px-3 h-10">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Illumination</span>
-                        <div className="flex gap-1.5">
+                    <div className="flex flex-1 min-w-[200px] items-center gap-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 px-3 h-10">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Light</span>
+                        <div className="flex gap-1">
                             {['L', 'R', 'T', 'B'].map(code => (
                                 <button
                                     key={code}
                                     onClick={() => toggleIllumination(code)}
-                                    className={`size-7 rounded flex items-center justify-center text-xs font-bold transition-all ${illuminationFilters.includes(code)
+                                    className={`size-6 rounded flex items-center justify-center text-[10px] font-bold transition-all ${illuminationFilters.includes(code)
                                         ? 'bg-primary text-white shadow-sm ring-2 ring-primary/20'
                                         : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
                                         }`}
@@ -153,38 +153,38 @@ export const RunList = ({ onViewDetail, onCreate }: { onViewDetail: (id: string)
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 px-3 h-9">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">PCB Model</span>
+                    <div className="flex flex-1 min-w-[120px] items-center gap-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 px-3 h-10">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Model</span>
                         <input
                             type="text"
                             placeholder="e.g. M18"
                             value={boardFilter}
                             onChange={(e) => setBoardFilter(e.target.value)}
-                            className="bg-transparent text-sm font-medium text-slate-600 dark:text-slate-300 focus:outline-none w-24"
+                            className="bg-transparent text-sm font-medium text-slate-600 dark:text-slate-300 focus:outline-none w-full"
                         />
                     </div>
 
-                    <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 px-3 h-9">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Date</span>
+                    <div className="flex flex-1 min-w-[160px] items-center gap-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 px-3 h-10">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</span>
                         <input
                             type="date"
                             value={dateFilter}
                             onChange={(e) => setDateFilter(e.target.value)}
-                            className="bg-transparent text-sm font-medium text-slate-600 dark:text-slate-300 focus:outline-none"
+                            className="bg-transparent text-sm font-medium text-slate-600 dark:text-slate-300 focus:outline-none w-full"
                         />
                     </div>
 
                     <button
                         onClick={() => { setStatusFilter('All'); setBoardFilter(''); setDateFilter(''); setIlluminationFilters([]); }}
-                        className="text-xs font-bold text-primary hover:underline ml-2"
+                        className="text-xs font-bold text-primary hover:underline px-2"
                     >
-                        Reset Filters
+                        Reset
                     </button>
 
-                    <div className="ml-auto flex items-center">
-                        <div className="relative">
+                    <div className="w-full md:w-auto md:ml-auto flex items-center">
+                        <div className="relative w-full">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-[20px]">search</span>
-                            <input className="h-9 w-64 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-10 pr-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none dark:text-white placeholder:text-slate-400" placeholder="Search Serial Number..." type="text" />
+                            <input className="h-10 w-full md:w-64 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-10 pr-4 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none dark:text-white placeholder:text-slate-400 shadow-sm" placeholder="Search Serial Number..." type="text" />
                         </div>
                     </div>
                 </div>
